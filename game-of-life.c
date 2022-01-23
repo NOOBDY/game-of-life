@@ -1,41 +1,53 @@
+#include <locale.h>
 #include <ncurses.h>
 #include <stdlib.h>
 
 void render(int *board, int width, int height) {
     int i;
-    for (i=0; i<width*height; i++) {
-        addch(board[i] == 0 ? ' ' : '#');
 
-        /* change line when the index reaches the multiple of the width */
-        if ((i + 1) % width == 0) {
-            addch('\n');
-        }
+    curs_set(0);
+
+    for (i = 0; i < width * height; i++) {
+        mvaddstr(i / height, i % width * 2, board[i] ? "██" : "  " );
     }
+}
 
+void update(int* board, int width, int height) {
+    int i;
+    for (i = 0; i < width * height; i++) {
+        board[i] = !board[i];
+    }
 }
 
 int main(void) {
     int width = 3;
     int height = 3;
-
-    /* process the board as an 1D array */
-    int board[] = {
+    int init_values[] = {
         0, 1, 1,
         1, 0, 1,
         0, 0, 1
     };
 
+    /* process the board as an 1D array */
+    int *board = (int*)malloc(width * height);
+    board = init_values;
+    setlocale(LC_ALL, "");
+    nodelay(stdscr, true); /* makes getch() non blocking */
     initscr();
 
     render(board, width, height);
 
     refresh();
 
-    addstr("\n\n\n\npress any key to contiune...");
-    refresh();
+    while (true) {
+        int ch = getch();
+        if (ch != ERR) {
+            endwin();
+            return EXIT_SUCCESS;
+        }
+        update(board, width, height);
+        render(board, width, height);
+        napms(1000);
+    }
 
-    getch();
-    endwin();
-
-    return EXIT_SUCCESS;
 }
