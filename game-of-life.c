@@ -32,8 +32,8 @@ int main(void) {
     int *board = (int*)malloc(width * height);
     board = init_values;
     setlocale(LC_ALL, "");
+    initscr(); /* this line must be in front of nodelay() for some reason */
     nodelay(stdscr, true); /* makes getch() non blocking */
-    initscr();
 
     render(board, width, height);
 
