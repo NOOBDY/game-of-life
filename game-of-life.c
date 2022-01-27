@@ -1,25 +1,28 @@
-#include <locale.h>
-#include <ncurses.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+#include <locale.h>
+
+#include <ncurses.h>
+
 
 void render(int *board, int width, int height) {
     int i;
 
     curs_set(0);
 
-    for (i = 0; i < width * height; i++) {
-        mvaddstr(i / width, i % width * 2, board[i] ? "██" : "  " );
-    }
+    for (i = 0; i < width * height; i++)
+        mvaddstr(i / width, i % width * 2, board[i] ? "██" : "░░" );
+
 }
 
 void update(int* board, int width, int height) {
     int *new_board = (int*)malloc(width * height * sizeof(int));
+
     int i;
     for (i = 0; i < width * height; i++) {
-        int left   = i % width == 0           ? 1 : 0;
-        int right  = i % width == width - 1   ? 1 : 0;
-        int top    = i < width                ? 1 : 0;
+        int left   = i % width == 0            ? 1 : 0;
+        int right  = i % width == width - 1    ? 1 : 0;
+        int top    = i < width                 ? 1 : 0;
         int bottom = i >= width * (height - 1) ? 1 : 0;
 
         int alive = 0;
@@ -48,35 +51,39 @@ void update(int* board, int width, int height) {
 }
 
 int main(void) {
-    int width = 5;
-    int height = 5;
+    int width = 9;
+    int height = 9;
     int init_values[] = {
-        0,0,0,0,0,
-        0,0,0,1,0,
-        0,1,0,1,0,
-        0,0,1,1,0,
-        0,0,0,0,0
+        0,0,0,0,0,0,0,0,0,
+        0,0,0,1,0,0,0,0,0,
+        0,1,0,1,0,0,0,0,0,
+        0,0,1,1,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,
     };
 
     /* process the board as an 1D array */
     int *board = (int*)malloc(width * height * sizeof(int));
     memcpy(board, init_values, width * height * sizeof(int));
-    setlocale(LC_ALL, "");
+
+    setlocale(LC_ALL, ""); /* unicode setup */
     initscr(); /* this line must be in front of nodelay() for some reason */
     nodelay(stdscr, true); /* makes getch() non blocking */
 
-    render(board, width, height);
-
     while (true) {
         int ch = getch();
-        if (ch != ERR) {
-            free(board);
-            endwin();
-            return EXIT_SUCCESS;
-        }
-        update(board, width, height);
+        if (ch == 'q')
+            break;
+
         render(board, width, height);
-        napms(500);
+        update(board, width, height);
+        napms(200);
     }
 
+    free(board);
+    endwin();
+    return EXIT_SUCCESS;
 }
