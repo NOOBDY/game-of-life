@@ -1,3 +1,5 @@
+#include <bits/types/FILE.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
@@ -5,18 +7,79 @@
 #include <ncurses.h>
 
 
-void render(int *board, int width, int height) {
+struct Board {
+    int width;
+    int height;
+
+    int *values;
+};
+
+void init(struct Board *board, const char *path) {
+    FILE *file = fopen(path, "r");
+    int i = 0, ch = 0, size = 0, width = 0, height = 0;
+
+    while (ch != EOF) {
+        ch = fgetc(file);
+
+        if (ch == '\n') {
+            height++;
+            continue;
+        }
+
+        size++;
+    }
+
+    width = size / height;
+
+    if (size - 1 != width * height) {
+        printf("Wrong board dimensions\n");
+        exit(1);
+    }
+
+    board->width = width;
+    board->height = height;
+    board->values = realloc(board->values, width * height * sizeof(int));
+
+    if (!board->values) {
+        printf("Failed to initialize\n");
+        exit(1);
+    }
+
+
+    rewind(file);
+    ch = 0;
+    i = 0;
+
+    while (ch != EOF) {
+        ch = fgetc(file);
+
+        if (ch == '\n')
+            continue;
+
+        board->values[i] = ch == '0' ? 0 : 1;
+        ++i;
+    }
+
+    fclose(file);
+
+}
+
+void render(const struct Board *board) {
     int i;
 
     curs_set(0);
 
-    for (i = 0; i < width * height; i++)
-        mvaddstr(i / width, i % width * 2, board[i] ? "██" : "░░" );
+    for (i = 0; i < board->width * board->height; i++)
+        mvaddstr(i / board->width, i % board->width * 2, board->values[i] ? "██" : "░░" );
 
 }
 
-void update(int* board, int width, int height) {
-    int *new_board = (int*)malloc(width * height * sizeof(int));
+void update(struct Board *board) {
+    /* just for alias purposes */
+    const int width = board->width;
+    const int height = board->height;
+
+    int *new_values = malloc(width * height * sizeof(int));
 
     int i;
     for (i = 0; i < width * height; i++) {
@@ -26,48 +89,38 @@ void update(int* board, int width, int height) {
         int bottom = i >= width * (height - 1) ? 1 : 0;
 
         int alive = 0;
-        alive += board[i - width + top * width * height - 1 + left * width];
-        alive += board[i - width + top * width * height];
-        alive += board[i - width + top * width * height + 1 - right * width];
-        alive += board[i - 1 + left * width];
-        alive += board[i + 1 - right * width];
-        alive += board[i + width - bottom * width * height - 1 + left * width];
-        alive += board[i + width - bottom * width * height];
-        alive += board[i + width - bottom * width * height + 1 - right * width];
+        alive += board->values[i - width + top * width * height - 1 + left * width];
+        alive += board->values[i - width + top * width * height];
+        alive += board->values[i - width + top * width * height + 1 - right * width];
+        alive += board->values[i - 1 + left * width];
+        alive += board->values[i + 1 - right * width];
+        alive += board->values[i + width - bottom * width * height - 1 + left * width];
+        alive += board->values[i + width - bottom * width * height];
+        alive += board->values[i + width - bottom * width * height + 1 - right * width];
 
-        if (board[i] && (alive < 2 || alive > 3))
-            new_board[i] = 0;
+        if (board->values[i] && (alive < 2 || alive > 3)) {
+            new_values[i] = 0;
+            continue;
+        }
 
-        else if (!board[i] && alive == 3)
-            new_board[i] = 1;
+        if (!board->values[i] && alive == 3) {
+            new_values[i] = 1;
+            continue;
+        }
 
-        else
-            new_board[i] = board[i];
+        new_values[i] = board->values[i];
 
     }
 
-    memcpy(board, new_board, width * height * sizeof(int));
-    free(new_board);
+    memcpy(board->values, new_values, width * height * sizeof(int));
+    free(new_values);
 }
 
 int main(void) {
-    int width = 9;
-    int height = 9;
-    int init_values[] = {
-        0,0,0,0,0,0,0,0,0,
-        0,0,0,1,0,0,0,0,0,
-        0,1,0,1,0,0,0,0,0,
-        0,0,1,1,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,
-    };
-
     /* process the board as an 1D array */
-    int *board = (int*)malloc(width * height * sizeof(int));
-    memcpy(board, init_values, width * height * sizeof(int));
+    struct Board init_values = {0, 0, NULL};
+    struct Board *board = &init_values;
+    init(board, "board.txt");
 
     setlocale(LC_ALL, ""); /* unicode setup */
     initscr(); /* this line must be in front of nodelay() for some reason */
@@ -78,12 +131,12 @@ int main(void) {
         if (ch == 'q')
             break;
 
-        render(board, width, height);
-        update(board, width, height);
+        render(board);
+        update(board);
         napms(200);
     }
 
-    free(board);
+    free(board->values);
     endwin();
     return EXIT_SUCCESS;
 }
