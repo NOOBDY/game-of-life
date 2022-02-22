@@ -14,7 +14,7 @@ struct Board {
     int *values;
 };
 
-void init(struct Board *board, const char *path) {
+int init(struct Board *board, const char *path) {
     FILE *file = fopen(path, "r");
     int i = 0, ch = 0, size = 0, width = 0, height = 0;
 
@@ -33,16 +33,17 @@ void init(struct Board *board, const char *path) {
 
     if (size - 1 != width * height) {
         printf("Wrong board dimensions\n");
-        exit(1);
+        return 1;
     }
 
     board->width = width;
     board->height = height;
-    board->values = realloc(board->values, width * height * sizeof(int));
+    /* + 1 to accommodate null termination character */
+    board->values = realloc(board->values, (width * height + 1) * sizeof(int));
 
     if (!board->values) {
         printf("Failed to initialize\n");
-        exit(1);
+        return 1;
     }
 
 
@@ -62,6 +63,7 @@ void init(struct Board *board, const char *path) {
 
     fclose(file);
 
+    return 0;
 }
 
 void render(const struct Board *board) {
@@ -120,7 +122,10 @@ int main(void) {
     /* process the board as an 1D array */
     struct Board init_values = {0, 0, NULL};
     struct Board *board = &init_values;
-    init(board, "board.txt");
+    int init_error = init(board, "board.txt");
+
+    if (init_error)
+        return EXIT_FAILURE;
 
     setlocale(LC_ALL, ""); /* unicode setup */
     initscr(); /* this line must be in front of nodelay() for some reason */
