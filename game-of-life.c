@@ -54,10 +54,25 @@ int init(struct Board *board, const char *path) {
     while (ch != EOF) {
         ch = fgetc(file);
 
-        if (ch == '\n')
-            continue;
+        switch (ch) {
+            case '\n':
+            case EOF:
+                continue;
 
-        board->values[i] = ch == '0' ? 0 : 1;
+            case '.':
+                board->values[i] = 0;
+                break;
+
+            case 'O':
+            case 'o':
+                board->values[i] = 1;
+                break;
+
+            default:
+                printf("Invalid character: %d\n", ch);
+                return 1;
+        }
+
         ++i;
     }
 
